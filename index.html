@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>The List</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Kalam:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --green: #1F5C4C;
+  --green-dark: #163F34;
+  --green-light: #2C7A63;
+  --cream: #FBF4E4;
+  --paper: #FFFDF7;
+  --marigold: #E8A93A;
+  --tomato: #C4432E;
+  --ink: #16241F;
+  --ink-soft: #4A5750;
+  --line: rgba(22,36,31,0.12);
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--cream);
+  font-family:'Inter',sans-serif;
+  color:var(--ink);
+  display:flex;
+  justify-content:center;
+}
+
+#app{
+  width:100%;
+  max-width:460px;
+  min-height:100vh;
+  background:var(--paper);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  box-shadow:0 0 40px rgba(0,0,0,0.06);
+}
+
+/* ---------- AWNING HEADER (signature element) ---------- */
+.awning-wrap{ position:relative; }
+.awning{
+  height:64px;
+  background: repeating-linear-gradient(
+    115deg,
+    var(--green) 0px, var(--green) 26px,
+    var(--cream) 26px, var(--cream) 52px
+  );
+}
+.awning-edge{ display:block; width:100%; height:22px; margin-top:-1px; }
+.awning-edge path{ fill:var(--green); }
+
+.header{
+  background:var(--green-dark);
+  padding:6px 20px 18px;
+  color:var(--cream);
+}
+.header-top{ display:flex; align-items:baseline; justify-content:space-between; }
+.brand{
+  font-family:'Permanent Marker', cursive;
+  font-size:30px;
+  letter-spacing:0.5px;
+  color:var(--cream);
+  transform:rotate(-1deg);
+  display:inline-block;
+}
+.counter{
+  font-family:'Inter',sans-serif;
+  font-weight:600;
+  font-size:13px;
+  background:rgba(251,244,228,0.12);
+  border:1px solid rgba(251,244,228,0.35);
+  border-radius:20px;
+  padding:5px 12px;
+  white-space:nowrap;
+}
+.tagline{
+  font-family:'Kalam',cursive;
+  font-size:13px;
+  color:rgba(251,244,228,0.75);
+  margin-top:2px;
+}
+.progress-track{
+  margin-top:12px;
+  height:6px;
+  border-radius:4px;
+  background:rgba(251,244,228,0.18);
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:var(--marigold);
+  width:0%;
+  transition:width .35s ease;
+}
+
+/* ---------- HEADER ICON BUTTONS ---------- */
+.icon-btns{ display:flex; gap:8px; align-items:center; }
+.icon-btn{
+  width:34px; height:34px;
+  border-radius:50%;
+  border:1px solid rgba(251,244,228,0.35);
+  background:rgba(251,244,228,0.12);
+  color:var(--cream);
+  font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:background .15s ease, transform .12s ease;
+}
+.icon-btn:active{ transform:scale(0.9); background:rgba(251,244,228,0.28); }
+
+/* ---------- MODAL / BOTTOM SHEET ---------- */
+.overlay{
+  position:fixed; inset:0;
+  background:rgba(22,36,31,0.5);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .2s ease;
+  z-index:50;
+}
+.overlay.open{ opacity:1; pointer-events:auto; }
+.sheet{
+  width:100%; max-width:460px;
+  background:var(--paper);
+  border-radius:20px 20px 0 0;
+  padding:20px 20px 26px;
+  transform:translateY(30px);
+  transition:transform .22s ease;
+  max-height:85vh;
+  overflow-y:auto;
+}
+.overlay.open .sheet{ transform:translateY(0); }
+.sheet-handle{
+  width:40px; height:4px;
+  background:var(--line);
+  border-radius:4px;
+  margin:0 auto 16px;
+}
+.sheet-title{
+  font-family:'Permanent Marker', cursive;
+  font-size:19px;
+  color:var(--green);
+  margin-bottom:14px;
+  transform:rotate(-0.5deg);
+}
+.sheet-sub{
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin:-8px 0 14px;
+}
+.sheet-btn{
+  width:100%;
+  display:flex; align-items:center; gap:10px;
+  font-family:'Inter',sans-serif;
+  font-weight:600; font-size:14.5px;
+  padding:13px 16px;
+  border-radius:12px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink);
+  cursor:pointer;
+  margin-bottom:10px;
+  transition:background .15s ease, transform .1s ease;
+}
+.sheet-btn:active{ transform:scale(0.98); }
+.sheet-btn.primary{ background:var(--green); border-color:var(--green); color:var(--cream); }
+.sheet-btn .emoji{ font-size:17px; }
+
+.share-preview{
+  width:100%;
+  min-height:120px;
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  background:rgba(31,92,76,0.05);
+  border:1px dashed var(--line);
+  border-radius:10px;
+  padding:12px;
+  white-space:pre-wrap;
+  resize:vertical;
+  margin-bottom:14px;
+}
+
+.import-textarea{
+  width:100%;
+  min-height:130px;
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  padding:12px;
+  background:var(--paper);
+  color:var(--ink);
+  resize:vertical;
+  margin-bottom:12px;
+}
+.import-textarea:focus{ outline:none; border-color:var(--green); }
+
+.file-drop{
+  display:flex; align-items:center; justify-content:center;
+  gap:8px;
+  border:1.5px dashed var(--line);
+  border-radius:10px;
+  padding:14px;
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  color:var(--ink-soft);
+  margin-bottom:14px;
+  cursor:pointer;
+}
+.file-drop input{ display:none; }
+
+.mode-toggle{
+  display:flex;
+  background:rgba(31,92,76,0.06);
+  border-radius:10px;
+  padding:3px;
+  margin-bottom:16px;
+}
+.mode-opt{
+  flex:1;
+  text-align:center;
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  font-weight:600;
+  padding:8px 6px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--ink-soft);
+}
+.mode-opt.active{ background:var(--paper); color:var(--green); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+
+.toast{
+  position:fixed;
+  bottom:24px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink);
+  color:var(--cream);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  font-weight:500;
+  padding:11px 20px;
+  border-radius:24px;
+  opacity:0;
+  pointer-events:none;
+  transition:all .25s ease;
+  z-index:60;
+  white-space:nowrap;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ---------- ADD BAR ---------- */
+.add-section{
+  padding:18px 20px 10px;
+  border-bottom:1px dashed var(--line);
+}
+.add-row{
+  display:flex;
+  gap:8px;
+}
+.add-row input{
+  flex:1;
+  font-family:'Kalam',cursive;
+  font-size:17px;
+  border:2px solid var(--ink);
+  border-radius:10px;
+  padding:10px 14px;
+  background:var(--paper);
+  color:var(--ink);
+  outline:none;
+}
+.add-row input::placeholder{ color:var(--ink-soft); opacity:0.6; }
+.add-row input:focus{ border-color:var(--green); box-shadow:0 0 0 3px rgba(31,92,76,0.15); }
+
+.add-btn{
+  width:44px; height:44px; flex-shrink:0;
+  background:var(--green);
+  border:none; border-radius:10px;
+  color:var(--cream);
+  font-size:26px;
+  line-height:1;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .12s ease, background .12s ease;
+}
+.add-btn:active{ transform:scale(0.9); background:var(--green-dark); }
+
+.chip-row{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:12px 2px 4px;
+  scrollbar-width:none;
+}
+.chip-row::-webkit-scrollbar{ display:none; }
+.chip{
+  flex-shrink:0;
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  font-weight:600;
+  padding:6px 13px;
+  border-radius:20px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink-soft);
+  cursor:pointer;
+  transition:all .15s ease;
+  white-space:nowrap;
+}
+.chip.active{
+  background:var(--marigold);
+  border-color:var(--marigold);
+  color:var(--ink);
+}
+
+/* ---------- LIST ---------- */
+.list-scroll{
+  flex:1;
+  padding:6px 0 24px;
+}
+.category-block{ margin-top:18px; }
+.category-title{
+  font-family:'Permanent Marker', cursive;
+  font-size:15px;
+  color:var(--green);
+  padding:0 20px 6px;
+  letter-spacing:0.5px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.category-title::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+
+.item-row{
+  position:relative;
+  overflow:hidden;
+  border-bottom:1px solid var(--line);
+}
+.item-swipe{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 20px;
+  background:var(--paper);
+  transform:translateX(0);
+  transition:transform .18s ease;
+  touch-action:pan-y;
+}
+.item-delete-bg{
+  position:absolute;
+  inset:0;
+  background:var(--tomato);
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  padding-right:22px;
+  color:var(--cream);
+  font-weight:700;
+  font-size:14px;
+}
+
+.checkbox{
+  width:26px; height:26px;
+  flex-shrink:0;
+  border:2.5px solid var(--ink);
+  border-radius:7px;
+  position:relative;
+  cursor:pointer;
+  transform:rotate(-1deg);
+}
+.checkbox svg{
+  position:absolute; top:-4px; left:-4px;
+  width:32px; height:32px;
+  pointer-events:none;
+}
+.checkbox svg path{
+  fill:none;
+  stroke:var(--green);
+  stroke-width:4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:40;
+  stroke-dashoffset:40;
+  transition:stroke-dashoffset .3s ease;
+}
+.item-row.checked .checkbox svg path{ stroke-dashoffset:0; }
+.item-row.checked .checkbox{ border-color:var(--green); background:rgba(31,92,76,0.08); }
+
+.item-text-wrap{ flex:1; position:relative; min-width:0; }
+.item-text{
+  font-family:'Kalam',cursive;
+  font-size:17px;
+  color:var(--ink);
+  word-break:break-word;
+  transition:color .25s ease;
+}
+.item-text::after{
+  content:'';
+  position:absolute;
+  left:0; top:50%;
+  height:2.5px;
+  width:0%;
+  background:var(--tomato);
+  transform:rotate(-1.5deg);
+  transition:width .3s ease;
+}
+.item-row.checked .item-text{ color:var(--ink-soft); }
+.item-row.checked .item-text::after{ width:103%; }
+
+.item-x{
+  flex-shrink:0;
+  width:26px; height:26px;
+  border:none;
+  background:none;
+  color:var(--ink-soft);
+  font-size:18px;
+  cursor:pointer;
+  opacity:0.5;
+}
+.item-x:hover{ opacity:1; color:var(--tomato); }
+
+.empty-state{
+  text-align:center;
+  padding:60px 30px;
+  color:var(--ink-soft);
+}
+.empty-state .big{
+  font-family:'Permanent Marker', cursive;
+  font-size:20px;
+  color:var(--green);
+  margin-bottom:6px;
+  transform:rotate(-1deg);
+  display:inline-block;
+}
+.empty-state .small{
+  font-family:'Kalam',cursive;
+  font-size:15px;
+}
+
+/* ---------- FOOTER ---------- */
+.footer{
+  padding:14px 20px 20px;
+  border-top:1px dashed var(--line);
+  display:flex;
+  justify-content:center;
+}
+.clear-btn{
+  font-family:'Inter',sans-serif;
+  font-weight:600;
+  font-size:13.5px;
+  color:var(--tomato);
+  background:none;
+  border:1.5px solid var(--tomato);
+  border-radius:20px;
+  padding:9px 20px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.clear-btn:active{ background:var(--tomato); color:var(--cream); }
+.clear-btn[disabled]{
+  opacity:0.35;
+  border-color:var(--ink-soft);
+  color:var(--ink-soft);
+  cursor:default;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="awning-wrap">
+    <div class="awning"></div>
+    <svg class="awning-edge" viewBox="0 0 400 22" preserveAspectRatio="none">
+      <path d="M0,0 Q16.6,22 33.3,0 Q50,22 66.6,0 Q83.3,22 100,0 Q116.6,22 133.3,0 Q150,22 166.6,0 Q183.3,22 200,0 Q216.6,22 233.3,0 Q250,22 266.6,0 Q283.3,22 300,0 Q316.6,22 333.3,0 Q350,22 366.6,0 Q383.3,22 400,0 L400,0 L0,0 Z"/>
+    </svg>
+    <div class="header">
+      <div class="header-top">
+        <span class="brand">The List</span>
+        <div class="icon-btns">
+          <button class="icon-btn" id="importOpenBtn" aria-label="Import list">📥</button>
+          <button class="icon-btn" id="exportOpenBtn" aria-label="Share list">📤</button>
+        </div>
+      </div>
+      <div class="header-top" style="margin-top:6px;">
+        <span class="counter" id="counter">0 of 0</span>
+      </div>
+      <div class="tagline">everything you need, nothing you forgot</div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+
+  <div class="add-section">
+    <div class="add-row">
+      <input type="text" id="itemInput" placeholder="Add something to the list…" maxlength="60" autocomplete="off">
+      <button class="add-btn" id="addBtn" aria-label="Add item">+</button>
+    </div>
+    <div class="chip-row" id="chipRow"></div>
+  </div>
+
+  <div class="list-scroll" id="listScroll"></div>
+
+  <div class="footer">
+    <button class="clear-btn" id="clearBtn">Clear checked</button>
+  </div>
+
+  <!-- EXPORT SHEET -->
+  <div class="overlay" id="exportOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Share your list</div>
+      <div class="sheet-sub">Send it as a message, or download a file for someone to import.</div>
+      <button class="sheet-btn primary" id="shareNativeBtn"><span class="emoji">🔗</span> Share…</button>
+      <button class="sheet-btn" id="copyTextBtn"><span class="emoji">📋</span> Copy to clipboard</button>
+      <button class="sheet-btn" id="downloadBtn"><span class="emoji">⬇️</span> Download as file</button>
+      <textarea class="share-preview" id="sharePreview" readonly></textarea>
+      <button class="sheet-btn" id="closeExportBtn">Close</button>
+    </div>
+  </div>
+
+  <!-- IMPORT SHEET -->
+  <div class="overlay" id="importOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Import a list</div>
+      <div class="sheet-sub">Paste a shared list below, or upload the file you were sent.</div>
+      <div class="mode-toggle">
+        <div class="mode-opt active" id="modeAdd">Add to my list</div>
+        <div class="mode-opt" id="modeReplace">Replace my list</div>
+      </div>
+      <label class="file-drop">
+        <span class="emoji">📎</span> <span id="fileLabel">Choose a file…</span>
+        <input type="file" id="fileInput" accept=".json,.txt,text/plain,application/json">
+      </label>
+      <textarea class="import-textarea" id="importTextarea" placeholder="Paste the shared list text here…"></textarea>
+      <button class="sheet-btn primary" id="doImportBtn"><span class="emoji">📥</span> Import list</button>
+      <button class="sheet-btn" id="closeImportBtn">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const CATEGORIES = ['Produce','Dairy','Bakery','Meat & Seafood','Pantry','Frozen','Household','Other'];
+let items = [];
+let activeCategory = 'Produce';
+const STORAGE_KEY = 'shopping-list-items';
+
+const chipRow = document.getElementById('chipRow');
+const listScroll = document.getElementById('listScroll');
+const itemInput = document.getElementById('itemInput');
+const addBtn = document.getElementById('addBtn');
+const clearBtn = document.getElementById('clearBtn');
+const counter = document.getElementById('counter');
+const progressFill = document.getElementById('progressFill');
+
+function renderChips(){
+  chipRow.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (cat === activeCategory ? ' active' : '');
+    el.textContent = cat;
+    el.onclick = () => { activeCategory = cat; renderChips(); };
+    chipRow.appendChild(el);
+  });
+}
+
+function checkmarkSVG(){
+  return '<svg viewBox="0 0 32 32"><path d="M8 16 L14 22 L24 10"/></svg>';
+}
+
+function render(){
+  const total = items.length;
+  const done = items.filter(i => i.checked).length;
+  counter.textContent = total === 0 ? '0 of 0' : `${done} of ${total}`;
+  progressFill.style.width = total === 0 ? '0%' : `${(done/total)*100}%`;
+  clearBtn.disabled = done === 0;
+
+  listScroll.innerHTML = '';
+
+  if(total === 0){
+    listScroll.innerHTML = `
+      <div class="empty-state">
+        <div class="big">The list is empty</div>
+        <div class="small">add something above to get started</div>
+      </div>`;
+    return;
+  }
+
+  // group by category, preserving CATEGORIES order; unchecked first within group
+  CATEGORIES.forEach(cat => {
+    const groupItems = items.filter(i => i.category === cat);
+    if(groupItems.length === 0) return;
+    const sorted = [...groupItems].sort((a,b) => (a.checked === b.checked) ? 0 : (a.checked ? 1 : -1));
+
+    const block = document.createElement('div');
+    block.className = 'category-block';
+    block.innerHTML = `<div class="category-title">${cat}</div>`;
+
+    sorted.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'item-row' + (item.checked ? ' checked' : '');
+      row.dataset.id = item.id;
+      row.innerHTML = `
+        <div class="item-delete-bg">Delete</div>
+        <div class="item-swipe">
+          <div class="checkbox">${checkmarkSVG()}</div>
+          <div class="item-text-wrap"><span class="item-text">${escapeHTML(item.text)}</span></div>
+          <button class="item-x" aria-label="Delete item">✕</button>
+        </div>`;
+      block.appendChild(row);
+
+      const checkbox = row.querySelector('.checkbox');
+      checkbox.onclick = () => toggleItem(item.id);
+
+      const xBtn = row.querySelector('.item-x');
+      xBtn.onclick = () => deleteItem(item.id);
+
+      setupSwipe(row);
+    });
+
+    listScroll.appendChild(block);
+  });
+}
+
+function escapeHTML(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setupSwipe(row){
+  const swipeEl = row.querySelector('.item-swipe');
+  let startX = 0, currentX = 0, dragging = false;
+
+  swipeEl.addEventListener('pointerdown', e => {
+    dragging = true; startX = e.clientX; currentX = 0;
+    swipeEl.style.transition = 'none';
+  });
+  swipeEl.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    currentX = Math.min(0, e.clientX - startX);
+    swipeEl.style.transform = `translateX(${currentX}px)`;
+  });
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    swipeEl.style.transition = 'transform .18s ease';
+    if(currentX < -80){
+      swipeEl.style.transform = 'translateX(-100%)';
+      setTimeout(() => deleteItem(row.dataset.id), 160);
+    } else {
+      swipeEl.style.transform = 'translateX(0)';
+    }
+  }
+  swipeEl.addEventListener('pointerup', endDrag);
+  swipeEl.addEventListener('pointerleave', endDrag);
+}
+
+function toggleItem(id){
+  const item = items.find(i => i.id === id);
+  if(!item) return;
+  item.checked = !item.checked;
+  save();
+  setTimeout(render, item.checked ? 260 : 0);
+}
+
+function deleteItem(id){
+  items = items.filter(i => i.id !== id);
+  save();
+  render();
+}
+
+function addItem(){
+  const text = itemInput.value.trim();
+  if(!text) return;
+  items.push({ id: 'i' + Date.now() + Math.random().toString(36).slice(2,7), text, category: activeCategory, checked: false });
+  itemInput.value = '';
+  save();
+  render();
+}
+
+function clearChecked(){
+  items = items.filter(i => !i.checked);
+  save();
+  render();
+}
+
+async function save(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(items), false);
+  }catch(e){ console.error('Save failed', e); }
+}
+
+async function load(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){ items = JSON.parse(res.value); }
+  }catch(e){ items = []; }
+  render();
+}
+
+addBtn.addEventListener('click', addItem);
+itemInput.addEventListener('keydown', e => { if(e.key === 'Enter') addItem(); });
+clearBtn.addEventListener('click', clearChecked);
+
+/* ---------- TOAST ---------- */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+/* ---------- EXPORT ---------- */
+const exportOverlay = document.getElementById('exportOverlay');
+const exportOpenBtn = document.getElementById('exportOpenBtn');
+const closeExportBtn = document.getElementById('closeExportBtn');
+const sharePreview = document.getElementById('sharePreview');
+const shareNativeBtn = document.getElementById('shareNativeBtn');
+const copyTextBtn = document.getElementById('copyTextBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
+function buildShareText(){
+  if(items.length === 0) return '🛒 The List\n\n(empty list)';
+  let lines = ['🛒 The List', ''];
+  CATEGORIES.forEach(cat => {
+    const group = items.filter(i => i.category === cat);
+    if(group.length === 0) return;
+    lines.push(cat);
+    group.forEach(i => lines.push(`${i.checked ? '☑' : '☐'} ${i.text}`));
+    lines.push('');
+  });
+  const encoded = btoa(encodeURIComponent(JSON.stringify(items)));
+  lines.push(`[data]${encoded}[/data]`);
+  return lines.join('\n');
+}
+
+function openExportModal(){
+  sharePreview.value = buildShareText();
+  exportOverlay.classList.add('open');
+}
+function closeExportModal(){ exportOverlay.classList.remove('open'); }
+
+exportOpenBtn.addEventListener('click', openExportModal);
+closeExportBtn.addEventListener('click', closeExportModal);
+exportOverlay.addEventListener('click', e => { if(e.target === exportOverlay) closeExportModal(); });
+
+shareNativeBtn.addEventListener('click', async () => {
+  const text = buildShareText();
+  if(navigator.share){
+    try{ await navigator.share({ title: 'The List — shopping list', text }); }
+    catch(e){ /* user cancelled */ }
+  } else {
+    await copyToClipboard(text);
+    showToast('Sharing not supported here — copied instead');
+  }
+});
+
+copyTextBtn.addEventListener('click', async () => {
+  await copyToClipboard(buildShareText());
+  showToast('Copied! Paste it anywhere to share.');
+});
+
+downloadBtn.addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ app: 'the-list', items }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'shopping-list.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('List downloaded');
+});
+
+async function copyToClipboard(text){
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    sharePreview.focus();
+    sharePreview.select();
+    try{ document.execCommand('copy'); }catch(e2){ /* ignore */ }
+  }
+}
+
+/* ---------- IMPORT ---------- */
+const importOverlay = document.getElementById('importOverlay');
+const importOpenBtn = document.getElementById('importOpenBtn');
+const closeImportBtn = document.getElementById('closeImportBtn');
+const importTextarea = document.getElementById('importTextarea');
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.getElementById('fileLabel');
+const doImportBtn = document.getElementById('doImportBtn');
+const modeAdd = document.getElementById('modeAdd');
+const modeReplace = document.getElementById('modeReplace');
+let importMode = 'add';
+
+function openImportModal(){
+  importTextarea.value = '';
+  fileLabel.textContent = 'Choose a file…';
+  fileInput.value = '';
+  importMode = 'add';
+  modeAdd.classList.add('active');
+  modeReplace.classList.remove('active');
+  importOverlay.classList.add('open');
+}
+function closeImportModal(){ importOverlay.classList.remove('open'); }
+
+importOpenBtn.addEventListener('click', openImportModal);
+closeImportBtn.addEventListener('click', closeImportModal);
+importOverlay.addEventListener('click', e => { if(e.target === importOverlay) closeImportModal(); });
+
+modeAdd.addEventListener('click', () => { importMode = 'add'; modeAdd.classList.add('active'); modeReplace.classList.remove('active'); });
+modeReplace.addEventListener('click', () => { importMode = 'replace'; modeReplace.classList.add('active'); modeAdd.classList.remove('active'); });
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  fileLabel.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = () => { importTextarea.value = reader.result; };
+  reader.readAsText(file);
+});
+
+function normalizeCategory(cat){
+  const match = CATEGORIES.find(c => c.toLowerCase() === String(cat).toLowerCase().trim());
+  return match || 'Other';
+}
+
+function parseImportText(raw){
+  // 1) look for embedded encoded data block (from this app's share text)
+  const dataMatch = raw.match(/\[data\]([\s\S]*?)\[\/data\]/);
+  if(dataMatch){
+    try{
+      const parsed = JSON.parse(decodeURIComponent(atob(dataMatch[1].trim())));
+      if(Array.isArray(parsed)) return sanitizeItems(parsed);
+    }catch(e){ /* fall through */ }
+  }
+
+  // 2) plain JSON export ({app, items:[...]}) or a raw items array
+  const trimmed = raw.trim();
+  if(trimmed.startsWith('{') || trimmed.startsWith('[')){
+    try{
+      const parsed = JSON.parse(trimmed);
+      const arr = Array.isArray(parsed) ? parsed : parsed.items;
+      if(Array.isArray(arr)) return sanitizeItems(arr);
+    }catch(e){ /* fall through */ }
+  }
+
+  // 3) human-readable checklist text (☐/☑ or markdown "- [ ]" / "- [x]")
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const result = [];
+  let currentCategory = 'Other';
+  const checklineRe = /^(?:[☐☑]|[-*]\s*\[( |x|X)\])\s*(.+)$/;
+  lines.forEach(line => {
+    if(line.startsWith('🛒') || line.startsWith('[data]')) return;
+    const m = line.match(checklineRe);
+    if(m){
+      const checked = line.startsWith('☑') || (m[1] && m[1].toLowerCase() === 'x');
+      const text = m[2].trim();
+      if(text) result.push({ text, category: currentCategory, checked: !!checked });
+    } else if(CATEGORIES.some(c => c.toLowerCase() === line.toLowerCase())){
+      currentCategory = normalizeCategory(line);
+    }
+  });
+  return sanitizeItems(result);
+}
+
+function sanitizeItems(arr){
+  return arr
+    .filter(i => i && typeof i.text === 'string' && i.text.trim())
+    .map(i => ({
+      id: 'i' + Date.now() + Math.random().toString(36).slice(2,7),
+      text: i.text.trim().slice(0,60),
+      category: normalizeCategory(i.category || 'Other'),
+      checked: !!i.checked
+    }));
+}
+
+doImportBtn.addEventListener('click', () => {
+  const raw = importTextarea.value.trim();
+  if(!raw){ showToast('Paste or upload a list first'); return; }
+  const imported = parseImportText(raw);
+  if(imported.length === 0){ showToast("Couldn't read that list — check the format"); return; }
+
+  items = importMode === 'replace' ? imported : items.concat(imported);
+  save();
+  render();
+  closeImportModal();
+  showToast(`Imported ${imported.length} item${imported.length === 1 ? '' : 's'}`);
+});
+
+renderChips();
+load();
+</script>
+</body>
+</html>
