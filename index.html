@@ -255,6 +255,103 @@ body{
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
+/* ---------- AUTH GATE ---------- */
+.auth-gate{
+  position:fixed; inset:0;
+  background:var(--green-dark);
+  display:flex; align-items:center; justify-content:center;
+  z-index:100;
+  padding:24px;
+}
+.auth-card{
+  width:100%; max-width:380px;
+  background:var(--paper);
+  border-radius:18px;
+  padding:28px 24px;
+}
+.auth-brand{
+  font-family:'Permanent Marker', cursive;
+  font-size:28px;
+  color:var(--green);
+  text-align:center;
+  margin-bottom:4px;
+  transform:rotate(-1deg);
+}
+.auth-sub{
+  font-family:'Kalam',cursive;
+  font-size:14px;
+  color:var(--ink-soft);
+  text-align:center;
+  margin-bottom:22px;
+}
+.auth-tabs{
+  display:flex;
+  background:rgba(31,92,76,0.06);
+  border-radius:10px;
+  padding:3px;
+  margin-bottom:18px;
+}
+.auth-tab{
+  flex:1; text-align:center;
+  font-family:'Inter',sans-serif;
+  font-size:13px; font-weight:600;
+  padding:9px 6px; border-radius:8px;
+  cursor:pointer; color:var(--ink-soft);
+}
+.auth-tab.active{ background:var(--paper); color:var(--green); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+.auth-field{
+  width:100%;
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  border:1.5px solid var(--line);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:12px;
+  background:var(--paper);
+  color:var(--ink);
+}
+.auth-field:focus{ outline:none; border-color:var(--green); }
+.auth-submit{
+  width:100%;
+  font-family:'Inter',sans-serif;
+  font-weight:700; font-size:14.5px;
+  padding:13px;
+  border:none; border-radius:10px;
+  background:var(--green);
+  color:var(--cream);
+  cursor:pointer;
+  margin-top:4px;
+}
+.auth-submit:disabled{ opacity:0.6; }
+.auth-error{
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  color:var(--tomato);
+  margin:-4px 0 12px;
+  min-height:16px;
+}
+.auth-setup-note{
+  font-family:'Inter',sans-serif;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  background:rgba(232,169,58,0.15);
+  border:1px solid var(--marigold);
+  border-radius:10px;
+  padding:12px;
+  line-height:1.5;
+}
+.account-row{
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:'Inter',sans-serif;
+  font-size:12px;
+  color:rgba(251,244,228,0.7);
+  margin-top:4px;
+}
+.sync-dot{
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:var(--marigold); margin-right:5px;
+}
+
 /* ---------- ADD BAR ---------- */
 .add-section{
   padding:18px 20px 10px;
@@ -475,10 +572,38 @@ body{
   cursor:default;
 }
 </style>
+
+<!-- Firebase (Authentication + Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
 <div id="app">
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="auth-brand">The List</div>
+      <div class="auth-sub">sign in to keep your list on every device</div>
+
+      <div id="authSetupNotice" class="auth-setup-note" style="display:none;">
+        Accounts aren't set up yet. Add your Firebase project keys in the script section of this file (see the comment near <code>firebaseConfig</code>), then reload. Until then the app can't be used.
+      </div>
+
+      <div id="authForm">
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tabLogin">Log in</div>
+          <div class="auth-tab" id="tabSignup">Sign up</div>
+        </div>
+        <input type="email" class="auth-field" id="authEmail" placeholder="Email" autocomplete="email">
+        <input type="password" class="auth-field" id="authPassword" placeholder="Password (6+ characters)" autocomplete="current-password">
+        <div class="auth-error" id="authError"></div>
+        <button class="auth-submit" id="authSubmitBtn">Log in</button>
+      </div>
+    </div>
+  </div>
+
+
   <div class="awning-wrap">
     <div class="awning"></div>
     <svg class="awning-edge" viewBox="0 0 400 22" preserveAspectRatio="none">
@@ -490,11 +615,13 @@ body{
         <div class="icon-btns">
           <button class="icon-btn" id="importOpenBtn" aria-label="Import list">📥</button>
           <button class="icon-btn" id="exportOpenBtn" aria-label="Share list">📤</button>
+          <button class="icon-btn" id="logoutBtn" aria-label="Log out">🚪</button>
         </div>
       </div>
       <div class="header-top" style="margin-top:6px;">
         <span class="counter" id="counter">0 of 0</span>
       </div>
+      <div class="account-row"><span><span class="sync-dot" id="syncDot"></span><span id="accountLabel">Not signed in</span></span></div>
       <div class="tagline">everything you need, nothing you forgot</div>
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     </div>
@@ -697,18 +824,149 @@ function clearChecked(){
   render();
 }
 
-async function save(){
+/* =========================================================
+   FIREBASE SETUP
+   1. Go to https://console.firebase.google.com → create a free project
+   2. Project settings → General → "Your apps" → Add app → Web (</>) → copy the config object it gives you
+   3. Paste those values below, replacing the placeholders
+   4. Build → Authentication → Sign-in method → enable "Email/Password"
+   5. Build → Firestore Database → Create database (start in production mode)
+   6. In Firestore → Rules, paste:
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /shoppingLists/{userId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+          }
+        }
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const FIREBASE_CONFIGURED = !String(firebaseConfig.apiKey).includes('YOUR_');
+
+let auth = null, db = null, currentUser = null, unsubscribeSnapshot = null;
+let suppressNextSave = false; // avoids re-writing data we just received from a snapshot
+
+if(FIREBASE_CONFIGURED){
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+}
+
+/* ---------- AUTH GATE UI ---------- */
+const authGate = document.getElementById('authGate');
+const authSetupNotice = document.getElementById('authSetupNotice');
+const authForm = document.getElementById('authForm');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const authError = document.getElementById('authError');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const tabLogin = document.getElementById('tabLogin');
+const tabSignup = document.getElementById('tabSignup');
+const accountLabel = document.getElementById('accountLabel');
+const syncDot = document.getElementById('syncDot');
+const logoutBtn = document.getElementById('logoutBtn');
+let authMode = 'login';
+
+if(!FIREBASE_CONFIGURED){
+  authSetupNotice.style.display = 'block';
+  authForm.style.display = 'none';
+}
+
+tabLogin.addEventListener('click', () => setAuthMode('login'));
+tabSignup.addEventListener('click', () => setAuthMode('signup'));
+function setAuthMode(mode){
+  authMode = mode;
+  tabLogin.classList.toggle('active', mode === 'login');
+  tabSignup.classList.toggle('active', mode === 'signup');
+  authSubmitBtn.textContent = mode === 'login' ? 'Log in' : 'Sign up';
+  authError.textContent = '';
+}
+
+authSubmitBtn.addEventListener('click', async () => {
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  authError.textContent = '';
+  if(!email || !password){ authError.textContent = 'Enter an email and password.'; return; }
+  authSubmitBtn.disabled = true;
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(items), false);
-  }catch(e){ console.error('Save failed', e); }
+    if(authMode === 'login'){
+      await auth.signInWithEmailAndPassword(email, password);
+    } else {
+      await auth.createUserWithEmailAndPassword(email, password);
+    }
+  }catch(e){
+    authError.textContent = friendlyAuthError(e);
+  }finally{
+    authSubmitBtn.disabled = false;
+  }
+});
+
+function friendlyAuthError(e){
+  const map = {
+    'auth/email-already-in-use': 'That email already has an account — try logging in.',
+    'auth/invalid-email': 'That email address doesn\u2019t look right.',
+    'auth/weak-password': 'Password needs to be at least 6 characters.',
+    'auth/wrong-password': 'Wrong password — try again.',
+    'auth/user-not-found': 'No account with that email — try signing up.',
+    'auth/invalid-credential': 'Email or password is incorrect.'
+  };
+  return map[e.code] || 'Something went wrong. Try again.';
+}
+
+logoutBtn.addEventListener('click', () => { if(auth) auth.signOut(); });
+
+if(FIREBASE_CONFIGURED){
+  auth.onAuthStateChanged(user => {
+    if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+    if(user){
+      currentUser = user;
+      authGate.style.display = 'none';
+      accountLabel.textContent = user.email;
+      syncDot.style.background = 'var(--marigold)';
+      attachListSync(user.uid);
+    } else {
+      currentUser = null;
+      authGate.style.display = 'flex';
+      accountLabel.textContent = 'Not signed in';
+      items = [];
+      render();
+    }
+  });
+}
+
+/* ---------- FIRESTORE SYNC ---------- */
+function attachListSync(uid){
+  const docRef = db.collection('shoppingLists').doc(uid);
+  unsubscribeSnapshot = docRef.onSnapshot(snap => {
+    suppressNextSave = true;
+    items = (snap.exists && Array.isArray(snap.data().items)) ? snap.data().items : [];
+    render();
+  }, err => {
+    console.error('Sync error', err);
+    showToast('Sync error — check your connection');
+  });
+}
+
+async function save(){
+  if(suppressNextSave){ suppressNextSave = false; return; }
+  if(!FIREBASE_CONFIGURED || !currentUser){ return; }
+  try{
+    await db.collection('shoppingLists').doc(currentUser.uid)
+      .set({ items, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  }catch(e){ console.error('Save failed', e); showToast('Couldn\u2019t save — check your connection'); }
 }
 
 async function load(){
-  try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    if(res && res.value){ items = JSON.parse(res.value); }
-  }catch(e){ items = []; }
-  render();
+  render(); // auth gate controls visibility; list populates once signed in via attachListSync
 }
 
 addBtn.addEventListener('click', addItem);
